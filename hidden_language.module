@@ -8,9 +8,8 @@ function hidden_language_init() {
   $locale = $language->language;
 
   if ($language->hidden && !user_access('access all hidden languages') && !user_access("access hidden language $locale")) {
-    $default_language = language_default();
-    $language->prefix = $default_language->prefix;
-    drupal_goto('<front>', array('language' => $language)); // you have to enable at least default language
+    drupal_access_denied();
+    exit;
   }
 
   return;
