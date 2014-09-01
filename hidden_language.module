@@ -7,7 +7,7 @@ function hidden_language_init() {
   global $language;
   $locale = $language->language;
 
-  if ($language->hidden && !user_access('access all hidden languages') && !user_access("access hidden language $locale")) {
+  if ($language->hidden && !user_access('access all hidden languages') && !user_access("access hidden language $locale") && php_sapi_name() != "cli") {
     drupal_access_denied();
     exit;
   }
