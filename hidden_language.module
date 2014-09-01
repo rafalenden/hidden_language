@@ -66,7 +66,8 @@ function hidden_language_language_switch_links_alter(&$links, $type, $path) {
 
   foreach ($languages[1] as $language) {
     $langcode = $language->language;
-    if ($language->hidden && !user_access("access language $langcode") && isset($links[$langcode])) {
+    $access_hidden_language = user_access('access all hidden languages') || user_access("access hidden language $langcode");
+    if ($language->hidden && isset($links[$langcode]) && !$access_hidden_language) {
       unset($links[$langcode]);
     }
   }
