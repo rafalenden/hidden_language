@@ -30,7 +30,7 @@ function hidden_language_permission() {
 
   foreach ($languages[1] as $language) {
     $permissions["access hidden language $language->language"] = array(
-      'title' => t("Access hidden language $language->name"),
+      'title' => t('Access hidden language @language', array('@language' => $language->name)),
     );
   }
 
