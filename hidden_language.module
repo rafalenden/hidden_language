@@ -5,14 +5,19 @@
  */
 function hidden_language_init() {
   global $language;
-  $locale = $language->language;
+  $access_hidden_language = user_access('access all hidden languages') || user_access("access hidden language $language->language");
 
-  if ($language->hidden && !user_access('access all hidden languages') && !user_access("access hidden language $locale") && php_sapi_name() != "cli") {
+  // Check if Drush executed this request.
+  $is_drush = php_sapi_name() == 'cli';
+
+  // Check if current path is user login form.
+  $path = current_path();
+  $is_user_page = user_is_anonymous() && (in_array($path, array('user', 'user/login', 'user/password')) || fnmatch('user/reset/*', $path));
+
+  if ($language->hidden && !$access_hidden_language && !$is_drush && !$is_user_page) {
     drupal_access_denied();
-    exit;
+    drupal_exit();
   }
-
-  return;
 }
 
 /**
