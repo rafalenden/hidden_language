@@ -8,7 +8,7 @@ function hidden_language_init() {
   $access_hidden_language = user_access('access all hidden languages') || user_access("access hidden language $language->language");
 
   // Check if Drush executed this request.
-  $is_drush = php_sapi_name() == 'cli';
+  $is_drush = drupal_is_cli() && function_exists('drush_main');
 
   // Check if current path is user login form.
   $path = current_path();
