@@ -82,12 +82,12 @@ function hidden_language_language_switch_links_alter(&$links, $type, $path) {
  * Implements hook_preprocess_HOOK().
  */
 function hidden_language_preprocess_table(&$variables) {
-  if (isset($variables['attributes']['id']) && in_array($variables['attributes']['id'], array('language-order-weight', 'language-items-table'))) {
-    if ($variables['attributes']['id'] == 'language-order-weight') {
-      $form = drupal_get_form('locale_languages_overview_form');
+  if (isset($variables['attributes']['id']) && in_array($variables['attributes']['id'], array('language-order', 'language-order-weight', 'language-items-table'))) {
+    if (module_exists('language_hierarchy_form') && $variables['attributes']['id'] != 'language-order-weight') {
+      $form = drupal_get_form('language_hierarchy_form');
     }
     else {
-      $form = drupal_get_form('language_hierarchy_form');
+      $form = drupal_get_form('locale_languages_overview_form');
     }
 
     array_splice($variables['header'], 5, 0, t('Hidden'));
