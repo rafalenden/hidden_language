@@ -14,7 +14,7 @@ function hidden_language_init() {
   $path = current_path();
   $is_user_page = user_is_anonymous() && (in_array($path, array('user', 'user/login', 'user/password')) || fnmatch('user/reset/*', $path));
 
-  if ($language->hidden && !$access_hidden_language && !$is_drush && !$is_user_page) {
+  if (isset($language->hidden) && $language->hidden && !$access_hidden_language && !$is_drush && !$is_user_page) {
     drupal_access_denied();
     drupal_exit();
   }
