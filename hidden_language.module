@@ -142,8 +142,8 @@ function hidden_language_form_alter(&$form, &$form_state, $form_id) {
  */
 function hidden_language_form_submit($form, &$form_state) {
   // Save information about hidden languages to DB.
-  foreach ($form_state['values']['hidden'] as $langcode => $language) {
-    $hidden = $language ? 1 : 0;
+  foreach ($form_state['values']['hidden'] as $langcode => $is_hidden) {
+    $hidden = $is_hidden ? 1 : 0;
 
     // Update the language row in the db.
     db_update('languages')
