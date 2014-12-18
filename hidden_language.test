@@ -1,0 +1,218 @@
+<?php
+
+/**
+ * @file
+ * Tests for Hidden Language module.
+ */
+
+/**
+ * Base class for Hidden Language module tests.
+ */
+abstract class HiddenLanguageBaseTestCase extends DrupalWebTestCase {
+  protected $admin_user;
+
+  protected $admin_user_permissions = array(
+    'administer languages',
+    'access administration pages',
+    'administer site configuration',
+    'access all hidden languages',
+  );
+
+  public function setUp() {
+    $args = func_get_args();
+    call_user_func_array(array('parent', 'setUp'), $args);
+
+    $this->resetUsers();
+  }
+
+  /**
+   * Returns a user with admin rights.
+   */
+  public function getAdminUser(array $permissions = array()) {
+    if (!isset($this->admin_user)) {
+      $this->admin_user = $this->drupalCreateUser(array_merge($this->admin_user_permissions, $permissions));
+    }
+    return $this->admin_user;
+  }
+
+  /**
+   * Log in as admin user.
+   */
+  public function loginAdminUser() {
+    $this->drupalLogin($this->getAdminUser());
+  }
+
+  /**
+   * Logs a user out of the internal browser, then check the login page to confirm logout.
+   */
+  protected function drupalLogout() {
+    parent::drupalLogout();
+    $this->resetUsers();
+  }
+
+  /**
+   * Reset user fields to make test object reusable.
+   */
+  protected function resetUsers() {
+    unset($this->admin_user);
+  }
+
+  /**
+   * Install a specified language if it has not been already, otherwise make
+   * sure that the language is enabled.
+   *
+   * @param $langcode
+   *   Langcode of language to be added.
+   */
+  public function addLanguage($langcode) {
+    // Check to make sure that language has not already been installed.
+    $this->drupalGet('admin/config/regional/language');
+
+    if (strpos($this->drupalGetContent(), "enabled[$langcode]") === FALSE) {
+      // Doesn't have language installed so add it.
+      $edit = array();
+      $edit['langcode'] = $langcode;
+      $this->drupalPost('admin/config/regional/language/add', $edit, t('Add language'));
+
+      // Make sure we are not using a stale list.
+      drupal_static_reset('language_list');
+      $languages = language_list('language');
+      $this->assertTrue(array_key_exists($langcode, $languages), t('Language was installed successfully.'));
+
+      if (array_key_exists($langcode, $languages)) {
+        $this->assertRaw(t('The language %language has been created and can now be used. More information is available on the <a href="@locale-help">help screen</a>.', array('%language' => $languages[$langcode]->name, '@locale-help' => url('admin/help/locale'))), t('Language has been created.'));
+      }
+    }
+    elseif ($this->xpath('//input[@type="checkbox" and @name=:name and @checked="checked"]', array(':name' => 'enabled[' . $langcode . ']'))) {
+      // It is installed and enabled. No need to do anything.
+      $this->assertTrue(TRUE, 'Language [' . $langcode . '] already installed and enabled.');
+    }
+    else {
+      // It is installed but not enabled. Enable it.
+      $this->assertTrue(TRUE, 'Language [' . $langcode . '] already installed.');
+      $this->drupalPost(NULL, array('enabled[' . $langcode . ']' => TRUE), t('Save configuration'));
+      $this->assertRaw(t('Configuration saved.'), t('Language successfully enabled.'));
+    }
+  }
+
+  /**
+   * Get a language object from a language code.
+   */
+  public function getLanguage($langcode) {
+    if (is_object($langcode)) {
+      return $langcode;
+    }
+    else {
+      $language_list = language_list();
+      return $language_list[$langcode];
+    }
+  }
+
+  /**
+   * Enable URL language detection.
+   */
+  public function enableUrlLanguageDetection($types = array('language', 'language_content')) {
+    // Enable URL language detection and selection.
+    // In some cases language_content is not available.
+    $edit = array();
+    if ((is_array($types) && in_array('language', $types)) || (is_string($types) && $types == 'language')) {
+      $edit['language[enabled][locale-url]'] = TRUE;
+    }
+    if ((is_array($types) && in_array('language_content', $types)) || (is_string($types) && $types == 'language_content')) {
+      $edit['language_content[enabled][locale-interface]'] = TRUE;
+    }
+
+    $this->drupalPost('admin/config/regional/language/configure', $edit, t('Save settings'));
+    $this->assertRaw(t('Language negotiation configuration saved.'), t('URL language detection enabled.'));
+    $this->drupalGet('admin/config/regional/language/configure');
+    // Reset caches.
+    drupal_static_reset('locale_url_outbound_alter');
+    drupal_static_reset('language_list');
+  }
+
+  /**
+   * Retrieves a Drupal path or an absolute path with language.
+   */
+  public function get($language, $path = '', array $options = array(), array $headers = array()) {
+    $options['language'] = $this->getLanguage($language);
+    return $this->drupalGet($path, $options, $headers);
+  }
+
+  /**
+   * Posts to a Drupal path with language.
+   */
+  public function post($language, $path, $edit, $submit, array $options = array(), array $headers = array(), $form_html_id = NULL, $extra_post = NULL) {
+    $options['language'] = $this->getLanguage($language);
+    $this->drupalPost($path, $edit, $submit, $options, $headers, $form_html_id, $extra_post);
+  }
+
+  /**
+   * Hide language with specified language code.
+   *
+   * @param $langcode
+   *   Code of language to hide.
+   */
+  public function hideLanguage($langcode) {
+    $edit = array(
+      "hidden[$langcode]" => TRUE,
+    );
+    $this->drupalPost('admin/config/regional/language', $edit, t('Save configuration'));
+  }
+
+}
+
+class HiddenLanguageAccessTest extends HiddenLanguageBaseTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Access to hidden language',
+      'description' => 'Tests if access to languages is blocked properly.',
+      'group' => 'Hidden Language',
+    );
+  }
+
+  public function setUp() {
+    parent::setUp('hidden_language');
+
+    $this->loginAdminUser();
+
+    $this->addLanguage('pl');
+    $this->addLanguage('ru');
+    $this->enableUrlLanguageDetection('language');
+
+    $this->drupalLogout();
+  }
+
+  public function testAccess() {
+    // Test if Polish language is accessible.
+    $this->get('pl', '<front>');
+    $this->assertResponse(200);
+
+    // Test if Russian language is accessible.
+    $this->get('ru', '<front>');
+    $this->assertResponse(200);
+
+    // Test if English language is accessible.
+    $this->get('en', '<front>');
+    $this->assertResponse(200);
+
+    // Hide English and Russian languages.
+    $this->loginAdminUser();
+    $this->hideLanguage('en');
+    $this->hideLanguage('ru');
+    $this->drupalLogout();
+
+    // Test if Polish language is accessible.
+    $this->get('pl', '<front>');
+    $this->assertResponse(200);
+
+    // Test if Russian language is NOT accessible.
+    $this->get('ru', '<front>');
+    $this->assertResponse(403);
+
+    // Test if English language is NOT accessible.
+    $this->get('en', '<front>');
+    $this->assertResponse(403);
+  }
+
+}
