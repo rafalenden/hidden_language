@@ -1,9 +1,0 @@
-name = Hidden Language
-description = Hide language for end users.
-core = 7.x
-package = Multilingual - Internationalization
-
-dependencies[] = locale
-
-; Tests
-files[] = hidden_language.test
